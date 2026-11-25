@@ -1,35 +1,93 @@
-# DermAI
+<div align="center">
 
-DermAI is a research prototype for skin-lesion image classification. It is not
-a medical diagnostic tool.
+# DermAI — Skin Lesion Analysis
 
-## Requirements
+**An AI-assisted research prototype for exploring skin-lesion image classification and visual model explainability.**
 
-- Python 3.10 or newer
+Built with **PyTorch · MobileNetV3-Large · FastAPI · React · Grad-CAM**
+
+[Features](#features) · [Model & classes](#model--classification-classes) · [EDA & training](#dataset-eda--training-workflow) · [Grad-CAM](#grad-cam-explainability) · [Getting started](#getting-started) · [API](#api-overview) · [Limitations](#medical--research-use-disclaimer)
+
+</div>
+
+---
+
+## Overview
+
+DermAI provides a web workspace for uploading a skin-lesion image and reviewing a six-class model prediction. Each report brings together the predicted class, the model's softmax scores, a resized input image, and a Grad-CAM heatmap. Registered users can also view scan history, explore dashboard summaries, and download a PDF report.
+
+> **Important:** DermAI is a research and educational prototype, not a medical device or diagnostic service. Its predictions and visualizations must not be used to diagnose, rule out, or treat a skin condition.
+
+## Features
+
+- Image upload for **JPG, PNG, and WebP** files (up to 10 MB).
+- Six-class skin-lesion image classification using a **MobileNetV3-Large** model.
+- Prediction report with class scores and image preprocessing view.
+- **Grad-CAM** overlay to inspect image regions that influenced a prediction.
+- Account registration and sign-in, scan history, dashboard summaries, and PDF report downloads.
+- FastAPI backend with interactive API documentation.
+
+## Model & classification classes
+
+The inference service loads the trained checkpoint at `backend/ml_models/best_model.pth`. It converts images to RGB, resizes them to **224 × 224**, and applies ImageNet channel normalization before inference. The six output labels are:
+
+| Code | Class |
+|---|---|
+| `MEL` | Melanoma |
+| `NEV` | Melanocytic nevus |
+| `BCC` | Basal cell carcinoma |
+| `ACK` | Actinic keratosis |
+| `SEK` | Seborrheic keratosis |
+| `SCC` | Squamous cell carcinoma |
+
+The displayed scores are the model's softmax outputs; they are **not calibrated clinical probabilities**. The app also maps predicted classes to prototype risk labels, which are informational mappings rather than clinical assessments.
+
+## Dataset EDA & training workflow
+
+The project identifies **PAD-UFES-20** as its dataset. The dataset is described in the original publication as containing smartphone clinical photographs and associated patient and lesion information. The project interface cites published totals of **2,298 images, 1,641 lesions, and 1,373 patients**; these are dataset-level counts, not a statement of the training split used for this checkpoint.
+
+A useful exploratory data analysis (EDA) process for reproducing or extending this work is:
+
+1. Load the dataset's image/metadata annotations and verify file paths, labels, and missing values.
+2. Count examples by class and inspect class imbalance before choosing a split or sampling strategy.
+3. Review image dimensions, color distributions, and representative samples for each class; check for corrupt or duplicate files.
+4. Examine relevant metadata distributions and consider patient-level separation between train, validation, and test sets to reduce leakage between images from the same patient.
+5. Record the split, preprocessing, augmentation, and evaluation methodology so results can be reproduced.
+
+The deployed inference code shows a **MobileNetV3-Large** architecture with a six-output classification layer and uses the checkpoint above. However, the repository does not currently include training scripts or notebooks, EDA artifacts, split manifests, or evaluation metrics. Therefore, exact training hyperparameters, augmentation strategy, split composition, and model performance cannot be verified from this repository and are not claimed here. The checklist above is a recommended workflow—not a description of confirmed training runs.
+
+Dataset reference: [PAD-UFES-20: a skin lesion dataset composed of patient data and clinical images collected from smartphones](https://doi.org/10.1038/s41597-020-00608-w).
+
+## Grad-CAM explainability
+
+For each prediction, the backend generates a Grad-CAM map for the predicted class using the final feature layer of MobileNetV3-Large. The heatmap is resized and blended with the input image to create the overlay shown in the report.
+
+Grad-CAM is a coarse visualization of model activation. It is **not** a lesion segmentation, a reliable explanation of medical reasoning, or evidence that the highlighted region is clinically meaningful. Use it only as an interpretability aid when exploring model behavior.
+
+## Technology stack
+
+- **Frontend:** React 18, Vite, React Router, Axios, Recharts, and jsPDF
+- **Backend:** Python, FastAPI, Uvicorn, SQLAlchemy, and SQLite
+- **Machine learning & imaging:** PyTorch, TorchVision, Pillow, NumPy, and Matplotlib
+
+## Getting started
+
+### Prerequisites
+
+- Python **3.10 or newer**
 - Node.js and npm
-- The trained model at `backend/ml_models/best_model.pth`
+- The model checkpoint at `backend/ml_models/best_model.pth` (included in this repository)
 
-## Start both services in VS Code
+### Run the backend
 
-Open the `DEARMAISKIN` project folder in VS Code. The **Run DermAI app** task
-starts the frontend and backend when the folder opens. On first use, allow
-automatic tasks when VS Code prompts you. You can also start it manually using
-**Terminal > Run Task > Run DermAI app**. Keep both task terminals running
-while using the app; if the API is unavailable, account creation cannot reach
-the server.
-
-## Run the backend (Windows PowerShell)
-
-The project now auto-creates the backend virtual environment and installs its
-requirements the first time it starts. It also refuses to launch a duplicate
-server if the API port is already in use.
+From the repository root, in Windows PowerShell:
 
 ```powershell
 cd backend
 python ensure_backend.py
 ```
 
-If you prefer a manual setup, the equivalent commands are:
+This helper creates the backend virtual environment and installs the Python requirements on first use, then starts the API. Alternatively, start it manually:
 
 ```powershell
 cd backend
@@ -39,13 +97,9 @@ python -m pip install -r requirements.txt
 python -m uvicorn app.main:app --reload
 ```
 
-In VS Code, select `backend/.venv/Scripts/python.exe` as the Python
-interpreter after creating the environment.
+The API is available at <http://127.0.0.1:8000>; interactive Swagger documentation is at <http://127.0.0.1:8000/docs>.
 
-The API is available at <http://127.0.0.1:8000>; interactive API docs are at
-<http://127.0.0.1:8000/docs>.
-
-## Run the frontend
+### Run the frontend
 
 In a second terminal:
 
@@ -55,6 +109,45 @@ npm install
 npm run dev
 ```
 
-Open the Vite URL shown in the terminal (normally
-<http://localhost:5173>). The frontend uses `http://127.0.0.1:8000` by default;
-set `VITE_API_URL` if the backend is hosted elsewhere.
+Open the Vite URL printed in the terminal (normally <http://localhost:5173>). The frontend uses `http://127.0.0.1:8000` by default. To point it at another API URL, set `VITE_API_URL` in the frontend environment before starting Vite, for example:
+
+```env
+VITE_API_URL=http://127.0.0.1:8000
+```
+
+Keep both backend and frontend processes running while using the app. In VS Code, the repository's **Run DermAI app** task can start both services; if prompted, allow automatic tasks.
+
+## API overview
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/auth/register` | Register an account |
+| `POST` | `/auth/login` | Sign in |
+| `POST` | `/predict` | Upload an image and create a prediction report |
+| `GET` | `/history` | List saved scans (optionally filtered by `user_id`) |
+| `GET` | `/history/{scan_id}` | Retrieve a saved scan report |
+
+See the interactive API documentation at `/docs` while the backend is running for request and response schemas.
+
+## Repository structure
+
+```text
+.
+├── backend/
+│   ├── app/                 # FastAPI app, model inference, persistence
+│   ├── ml_models/            # Trained model checkpoint
+│   └── requirements.txt
+├── frontend/
+│   ├── src/                  # React application and report UI
+│   └── package.json
+└── README.md
+```
+
+## Medical & research-use disclaimer
+
+DermAI is an experimental software project. It has not been established as safe or effective for clinical use. Model outputs may be incorrect or biased, and performance on an uploaded image may differ from performance on the data used to develop the model. A low-risk label or benign prediction does not rule out disease. Consult a qualified healthcare professional for any health concern; do not delay care based on this application.
+
+## Acknowledgements
+
+- PAD-UFES-20 dataset authors and contributors: [original dataset publication](https://doi.org/10.1038/s41597-020-00608-w).
+- The PyTorch and TorchVision teams for the deep learning framework and model implementations.
