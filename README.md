@@ -6,7 +6,7 @@
 
 Built with **PyTorch · MobileNetV3-Large · FastAPI · React · Grad-CAM**
 
-[Features](#features) · [Model & classes](#model--classification-classes) · [EDA & training](#dataset-eda--training-workflow) · [Grad-CAM](#grad-cam-explainability) · [Getting started](#getting-started) · [API](#api-overview) · [Limitations](#medical--research-use-disclaimer)
+[Features](#features) · [Model & classes](#model--classification-classes) · [EDA & training](#dataset-eda--training-workflow) · [Visualizations](#visualizations) · [Getting started](#getting-started) · [API](#api-overview) · [Limitations](#medical--research-use-disclaimer)
 
 </div>
 
@@ -57,6 +57,50 @@ A useful exploratory data analysis (EDA) process for reproducing or extending th
 The deployed inference code shows a **MobileNetV3-Large** architecture with a six-output classification layer and uses the checkpoint above. However, the repository does not currently include training scripts or notebooks, EDA artifacts, split manifests, or evaluation metrics. Therefore, exact training hyperparameters, augmentation strategy, split composition, and model performance cannot be verified from this repository and are not claimed here. The checklist above is a recommended workflow—not a description of confirmed training runs.
 
 Dataset reference: [PAD-UFES-20: a skin lesion dataset composed of patient data and clinical images collected from smartphones](https://doi.org/10.1038/s41597-020-00608-w).
+
+## Visualizations
+
+### Application analysis flow
+
+```mermaid
+flowchart LR
+    A[Upload JPG, PNG, or WebP] --> B[RGB conversion and resize to 224 × 224]
+    B --> C[MobileNetV3-Large inference]
+    C --> D[Six softmax class scores]
+    C --> E[Grad-CAM for predicted class]
+    B --> F[Preprocessed image preview]
+    D --> G[Scan report and history]
+    E --> G
+    F --> G
+```
+
+The app's dashboard includes scan-history summaries and class/risk distribution graphics. For an individual analysis, open its result page to see the uploaded image, preprocessed image, prediction scores, and the Grad-CAM overlay generated for that scan. The repository does not currently include a static sample Grad-CAM image, so the visualization is produced at runtime rather than embedded here.
+
+### Confusion matrix
+
+A confusion matrix is a useful evaluation graphic, but it must be calculated from ground-truth labels and model predictions on a held-out test set. This repository does not include evaluation predictions or a test split, so no numerical matrix or accuracy is presented here. Once you have the true and predicted labels from your evaluation, this snippet generates a labeled matrix (rows are actual classes; columns are predicted classes):
+
+```python
+# Optional evaluation dependency: python -m pip install scikit-learn
+import matplotlib.pyplot as plt
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+
+class_names = ["MEL", "NEV", "BCC", "ACK", "SEK", "SCC"]
+
+# Replace these with labels collected from the held-out test set.
+y_true = [...]  # integer class indices, in class_names order
+y_pred = [...]  # integer class indices, in class_names order
+
+matrix = confusion_matrix(y_true, y_pred, labels=range(len(class_names)))
+display = ConfusionMatrixDisplay(confusion_matrix=matrix, display_labels=class_names)
+display.plot(cmap="Blues", values_format="d", xticks_rotation=45)
+plt.title("DermAI — held-out test confusion matrix")
+plt.tight_layout()
+plt.savefig("confusion_matrix.png", dpi=200, bbox_inches="tight")
+plt.show()
+```
+
+Only publish a confusion matrix after evaluating on a documented held-out set. Include the split methodology and per-class support alongside it; consider patient-level splits to limit leakage. Do not treat test-set results as clinical validation.
 
 ## Grad-CAM explainability
 
