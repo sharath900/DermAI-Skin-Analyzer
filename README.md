@@ -2,11 +2,11 @@
 
 # DermAI — Skin Lesion Analysis
 
-**An AI-assisted research prototype for exploring skin-lesion image classification and visual model explainability.**
+**An AI-assisted research prototype for skin-lesion image classification and visual model explainability.**
 
 Built with **PyTorch · MobileNetV3-Large · FastAPI · React · Grad-CAM**
 
-[Features](#features) · [Model & classes](#model--classification-classes) · [EDA & training](#dataset-eda--training-workflow) · [Visualizations](#visualizations) · [Getting started](#getting-started) · [API](#api-overview) · [Limitations](#medical--research-use-disclaimer)
+[Features](#features) · [Model](#model--classification-classes) · [EDA & training](#dataset-eda--training-workflow) · [Visualizations](#visualizations) · [Evaluation](#evaluate-the-checkpoint) · [Getting started](#getting-started) · [Disclaimer](#medical--research-use-disclaimer)
 
 </div>
 
@@ -14,22 +14,22 @@ Built with **PyTorch · MobileNetV3-Large · FastAPI · React · Grad-CAM**
 
 ## Overview
 
-DermAI provides a web workspace for uploading a skin-lesion image and reviewing a six-class model prediction. Each report brings together the predicted class, the model's softmax scores, a resized input image, and a Grad-CAM heatmap. Registered users can also view scan history, explore dashboard summaries, and download a PDF report.
+DermAI provides a web workspace for uploading a skin-lesion image and reviewing a six-class model prediction. Reports include prediction scores, the preprocessed image, and a Grad-CAM heatmap. Users can also review scan history, dashboard summaries, and download PDF reports.
 
 > **Important:** DermAI is a research and educational prototype, not a medical device or diagnostic service. Its predictions and visualizations must not be used to diagnose, rule out, or treat a skin condition.
 
 ## Features
 
-- Image upload for **JPG, PNG, and WebP** files (up to 10 MB).
-- Six-class skin-lesion image classification using a **MobileNetV3-Large** model.
-- Prediction report with class scores and image preprocessing view.
-- **Grad-CAM** overlay to inspect image regions that influenced a prediction.
-- Account registration and sign-in, scan history, dashboard summaries, and PDF report downloads.
+- Upload JPG, PNG, or WebP images (up to 10 MB).
+- MobileNetV3-Large inference across six lesion-image classes.
+- Prediction scores, preprocessed-image view, and per-scan Grad-CAM visualization.
+- Account registration/sign-in, scan history, dashboard summaries, and PDF reports.
 - FastAPI backend with interactive API documentation.
+- Optional evaluation script to generate an actual held-out-set confusion matrix and class-count graphic.
 
 ## Model & classification classes
 
-The inference service loads the trained checkpoint at `backend/ml_models/best_model.pth`. It converts images to RGB, resizes them to **224 × 224**, and applies ImageNet channel normalization before inference. The six output labels are:
+The inference service loads `backend/ml_models/best_model.pth`, converts images to RGB, resizes them to **224 × 224**, and applies ImageNet channel normalization.
 
 | Code | Class |
 |---|---|
@@ -40,27 +40,27 @@ The inference service loads the trained checkpoint at `backend/ml_models/best_mo
 | `SEK` | Seborrheic keratosis |
 | `SCC` | Squamous cell carcinoma |
 
-The displayed scores are the model's softmax outputs; they are **not calibrated clinical probabilities**. The app also maps predicted classes to prototype risk labels, which are informational mappings rather than clinical assessments.
+Displayed scores are softmax outputs, not calibrated clinical probabilities. Prototype risk labels are informational mappings, not clinical assessments.
 
 ## Dataset EDA & training workflow
 
-The project identifies **PAD-UFES-20** as its dataset. The dataset is described in the original publication as containing smartphone clinical photographs and associated patient and lesion information. The project interface cites published totals of **2,298 images, 1,641 lesions, and 1,373 patients**; these are dataset-level counts, not a statement of the training split used for this checkpoint.
+The project identifies **PAD-UFES-20** as its dataset. Its publication describes smartphone clinical photographs and associated patient and lesion information. The project interface cites published totals of **2,298 images, 1,641 lesions, and 1,373 patients**; these are dataset-level counts, not the training split for this checkpoint.
 
-A useful exploratory data analysis (EDA) process for reproducing or extending this work is:
+Recommended EDA for reproducing or extending the project:
 
-1. Load the dataset's image/metadata annotations and verify file paths, labels, and missing values.
-2. Count examples by class and inspect class imbalance before choosing a split or sampling strategy.
-3. Review image dimensions, color distributions, and representative samples for each class; check for corrupt or duplicate files.
-4. Examine relevant metadata distributions and consider patient-level separation between train, validation, and test sets to reduce leakage between images from the same patient.
-5. Record the split, preprocessing, augmentation, and evaluation methodology so results can be reproduced.
+1. Verify image paths, labels, missing metadata, corrupt files, and duplicates.
+2. Count images per class and inspect imbalance before selecting a split or sampling strategy.
+3. Review image dimensions, color distributions, and representative samples by class.
+4. Review relevant metadata and use patient-level train/validation/test separation where possible to reduce leakage.
+5. Document splits, preprocessing, augmentation, and evaluation methodology for reproducibility.
 
-The deployed inference code shows a **MobileNetV3-Large** architecture with a six-output classification layer and uses the checkpoint above. However, the repository does not currently include training scripts or notebooks, EDA artifacts, split manifests, or evaluation metrics. Therefore, exact training hyperparameters, augmentation strategy, split composition, and model performance cannot be verified from this repository and are not claimed here. The checklist above is a recommended workflow—not a description of confirmed training runs.
+The repository contains inference code and a checkpoint, but no training scripts/notebooks, EDA artifacts, split manifests, or evaluation metrics. Exact training settings and performance therefore cannot be verified or claimed here. The steps above are a recommended workflow, not a description of confirmed training runs.
 
-Dataset reference: [PAD-UFES-20: a skin lesion dataset composed of patient data and clinical images collected from smartphones](https://doi.org/10.1038/s41597-020-00608-w).
+Dataset reference: [PAD-UFES-20 publication](https://doi.org/10.1038/s41597-020-00608-w).
 
 ## Visualizations
 
-### Application analysis flow
+### Application inference flow
 
 ```mermaid
 flowchart LR
@@ -74,45 +74,52 @@ flowchart LR
     F --> G
 ```
 
-The app's dashboard includes scan-history summaries and class/risk distribution graphics. For an individual analysis, open its result page to see the uploaded image, preprocessed image, prediction scores, and the Grad-CAM overlay generated for that scan. The repository does not currently include a static sample Grad-CAM image, so the visualization is produced at runtime rather than embedded here.
+The dashboard visualizes the user's scan history and class/risk distributions. The report page shows the original image, preprocessed image, prediction scores, and the Grad-CAM overlay generated at runtime. No sample Grad-CAM image is committed to the repository.
 
-### Confusion matrix
+### Grad-CAM
 
-A confusion matrix is a useful evaluation graphic, but it must be calculated from ground-truth labels and model predictions on a held-out test set. This repository does not include evaluation predictions or a test split, so no numerical matrix or accuracy is presented here. Once you have the true and predicted labels from your evaluation, this snippet generates a labeled matrix (rows are actual classes; columns are predicted classes):
+The backend generates Grad-CAM for the predicted class from MobileNetV3-Large's final feature layer, then blends the resized heatmap with the input. This is a coarse activation visualization—not a lesion boundary, medical rationale, or evidence that a highlighted region is clinically meaningful.
 
-```python
-# Optional evaluation dependency: python -m pip install scikit-learn
-import matplotlib.pyplot as plt
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+### Confusion matrix and test-set class counts
 
-class_names = ["MEL", "NEV", "BCC", "ACK", "SEK", "SCC"]
+Use the evaluation script below to generate the confusion matrix and class distribution from your own labeled, held-out images. No matrix or performance values are hard-coded into this README because the repository does not include test predictions or a documented test split.
 
-# Replace these with labels collected from the held-out test set.
-y_true = [...]  # integer class indices, in class_names order
-y_pred = [...]  # integer class indices, in class_names order
+## Evaluate the checkpoint
 
-matrix = confusion_matrix(y_true, y_pred, labels=range(len(class_names)))
-display = ConfusionMatrixDisplay(confusion_matrix=matrix, display_labels=class_names)
-display.plot(cmap="Blues", values_format="d", xticks_rotation=45)
-plt.title("DermAI — held-out test confusion matrix")
-plt.tight_layout()
-plt.savefig("confusion_matrix.png", dpi=200, bbox_inches="tight")
-plt.show()
+The optional `backend/evaluate_model.py` script evaluates the existing checkpoint against images arranged into class-code folders. The folder names are treated as ground-truth labels:
+
+```text
+heldout_images/
+├── MEL/  # actual melanoma-labeled images
+├── NEV/
+├── BCC/
+├── ACK/
+├── SEK/
+└── SCC/
 ```
 
-Only publish a confusion matrix after evaluating on a documented held-out set. Include the split methodology and per-class support alongside it; consider patient-level splits to limit leakage. Do not treat test-set results as clinical validation.
+Place only held-out evaluation images in this directory. From the repository root, run:
 
-## Grad-CAM explainability
+```bash
+python backend/evaluate_model.py --data-dir path/to/heldout_images --output-dir evaluation_output
+```
 
-For each prediction, the backend generates a Grad-CAM map for the predicted class using the final feature layer of MobileNetV3-Large. The heatmap is resized and blended with the input image to create the overlay shown in the report.
+Optional arguments include `--batch-size 32`, `--device cpu`, or `--checkpoint path/to/best_model.pth`. By default, the script uses `backend/ml_models/best_model.pth` and automatically selects CUDA when available.
 
-Grad-CAM is a coarse visualization of model activation. It is **not** a lesion segmentation, a reliable explanation of medical reasoning, or evidence that the highlighted region is clinically meaningful. Use it only as an interpretability aid when exploring model behavior.
+It writes:
+
+- `confusion_matrix.png` — actual vs. predicted class counts, with row percentages.
+- `class_distribution.png` — ground-truth class counts in the evaluation set (not the full dataset EDA).
+- `metrics.json` — accuracy and per-class precision, recall, F1, and support.
+- `predictions.csv` — image path, true class, and predicted class for auditability.
+
+The confusion matrix uses **rows for true labels** and **columns for predicted labels**. Report the evaluation split and per-class support with any metrics. Patient-level separation should be considered to reduce leakage. Test results are not clinical validation.
 
 ## Technology stack
 
 - **Frontend:** React 18, Vite, React Router, Axios, Recharts, and jsPDF
-- **Backend:** Python, FastAPI, Uvicorn, SQLAlchemy, and SQLite
-- **Machine learning & imaging:** PyTorch, TorchVision, Pillow, NumPy, and Matplotlib
+- **Backend:** Python, FastAPI, Uvicorn, SQLAlchemy, SQLite
+- **ML & imaging:** PyTorch, TorchVision, Pillow, NumPy, and Matplotlib
 
 ## Getting started
 
@@ -120,18 +127,18 @@ Grad-CAM is a coarse visualization of model activation. It is **not** a lesion s
 
 - Python **3.10 or newer**
 - Node.js and npm
-- The model checkpoint at `backend/ml_models/best_model.pth` (included in this repository)
+- Model checkpoint at `backend/ml_models/best_model.pth` (included in this repository)
 
 ### Run the backend
 
-From the repository root, in Windows PowerShell:
+In Windows PowerShell, from the repository root:
 
 ```powershell
 cd backend
 python ensure_backend.py
 ```
 
-This helper creates the backend virtual environment and installs the Python requirements on first use, then starts the API. Alternatively, start it manually:
+The helper creates the backend virtual environment and installs requirements on first use, then starts the API. Alternatively, set it up manually:
 
 ```powershell
 cd backend
@@ -141,7 +148,7 @@ python -m pip install -r requirements.txt
 python -m uvicorn app.main:app --reload
 ```
 
-The API is available at <http://127.0.0.1:8000>; interactive Swagger documentation is at <http://127.0.0.1:8000/docs>.
+API: <http://127.0.0.1:8000> · Interactive docs: <http://127.0.0.1:8000/docs>
 
 ### Run the frontend
 
@@ -153,13 +160,7 @@ npm install
 npm run dev
 ```
 
-Open the Vite URL printed in the terminal (normally <http://localhost:5173>). The frontend uses `http://127.0.0.1:8000` by default. To point it at another API URL, set `VITE_API_URL` in the frontend environment before starting Vite, for example:
-
-```env
-VITE_API_URL=http://127.0.0.1:8000
-```
-
-Keep both backend and frontend processes running while using the app. In VS Code, the repository's **Run DermAI app** task can start both services; if prompted, allow automatic tasks.
+Open the Vite URL printed in the terminal (normally <http://localhost:5173>). The frontend uses `http://127.0.0.1:8000` by default; set `VITE_API_URL` before starting Vite to use a different backend URL. Keep both services running. VS Code's **Run DermAI app** task can start both services.
 
 ## API overview
 
@@ -171,27 +172,26 @@ Keep both backend and frontend processes running while using the app. In VS Code
 | `GET` | `/history` | List saved scans (optionally filtered by `user_id`) |
 | `GET` | `/history/{scan_id}` | Retrieve a saved scan report |
 
-See the interactive API documentation at `/docs` while the backend is running for request and response schemas.
+See `/docs` while the backend is running for request and response schemas.
 
 ## Repository structure
 
 ```text
 .
 ├── backend/
-│   ├── app/                 # FastAPI app, model inference, persistence
-│   ├── ml_models/            # Trained model checkpoint
+│   ├── app/                 # API, inference, and persistence
+│   ├── ml_models/           # Trained checkpoint
+│   ├── evaluate_model.py    # Held-out evaluation and plots
 │   └── requirements.txt
-├── frontend/
-│   ├── src/                  # React application and report UI
-│   └── package.json
+├── frontend/src/            # React application and report UI
 └── README.md
 ```
 
 ## Medical & research-use disclaimer
 
-DermAI is an experimental software project. It has not been established as safe or effective for clinical use. Model outputs may be incorrect or biased, and performance on an uploaded image may differ from performance on the data used to develop the model. A low-risk label or benign prediction does not rule out disease. Consult a qualified healthcare professional for any health concern; do not delay care based on this application.
+DermAI is experimental software and has not been established as safe or effective for clinical use. Outputs may be incorrect or biased, and performance on uploaded images may differ from performance on development data. A low-risk label or benign prediction does not rule out disease. Consult a qualified healthcare professional about health concerns; do not delay care based on this application.
 
 ## Acknowledgements
 
-- PAD-UFES-20 dataset authors and contributors: [original dataset publication](https://doi.org/10.1038/s41597-020-00608-w).
-- The PyTorch and TorchVision teams for the deep learning framework and model implementations.
+- PAD-UFES-20 dataset authors: [original publication](https://doi.org/10.1038/s41597-020-00608-w).
+- PyTorch and TorchVision teams for the deep learning framework and model implementations.
