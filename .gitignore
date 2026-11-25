@@ -1,0 +1,38 @@
+# Python virtual environments
+.venv*/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Node.js
+node_modules/
+dist/
+build/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# VS Code
+.vscode/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploaded images
+uploads/
+datasets/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
